@@ -19,6 +19,10 @@ public sealed class VaultObjectStore : IVaultObjectStore
     {
         var destination = GetObjectPath(vault.RootPath, contentHash);
         if (File.Exists(destination)) return;
+        var sourceLength = new FileInfo(sourcePath).Length;
+        var drive = new DriveInfo(Path.GetPathRoot(vault.RootPath)!);
+        if (drive.AvailableFreeSpace < sourceLength + 10L * 1024 * 1024)
+            throw new IOException("The vault destination does not have enough free space for this file.");
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         var temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
         try
@@ -127,5 +131,25 @@ public sealed class VaultObjectStore : IVaultObjectStore
             throw new ArgumentException("The content hash is invalid.", nameof(hash));
         return Path.Combine(vaultRoot, "objects", hash[..2], hash + ".vso");
     }
+
+    private sealed class AsyncStreamLock(FileStream stream) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync() => stream.DisposeAsync();
+    }
 }
+    public async Task<IAsyncDisposable> AcquireWriteLockAsync(UnlockedVault vault, CancellationToken cancellationToken)
+    {
+        var lockPath = Path.Combine(vault.RootPath, ".vaultsync.lock");
+        try
+        {
+            var stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1,
+                FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+            await stream.WriteAsync([1], cancellationToken).ConfigureAwait(false);
+            return new AsyncStreamLock(stream);
+        }
+        catch (IOException exception)
+        {
+            throw new InvalidOperationException("This vault is already being written by another backup operation.", exception);
+        }
+    }
 

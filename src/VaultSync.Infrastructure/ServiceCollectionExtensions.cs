@@ -14,6 +14,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IBackupService, BackupService>()
             .AddSingleton<IRecoveryService, RecoveryService>()
             .AddSingleton<BackupScheduler>()
+            .AddSingleton<SourceChangeMonitor>()
             .AddSingleton<VaultImporter>();
 }
-

@@ -18,6 +18,7 @@ public sealed class BackupService(IFileScanner scanner, IVaultObjectStore object
         var began = false;
         try
         {
+            await using var vaultLock = await objects.AcquireWriteLockAsync(vault, cancellationToken).ConfigureAwait(false);
             await metadata.InitializeAsync(vault.RootPath, cancellationToken).ConfigureAwait(false);
             await metadata.BeginSnapshotAsync(snapshotId, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
             began = true;
@@ -70,4 +71,3 @@ public sealed class BackupService(IFileScanner scanner, IVaultObjectStore object
         }
     }
 }
-

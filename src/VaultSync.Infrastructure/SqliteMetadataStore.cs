@@ -41,6 +41,8 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
         snapshot.LogicalBytes = manifest.LogicalBytes;
         snapshot.NewStoredBytes = newStoredBytes;
         snapshot.ManifestPath = manifestPath;
+        var knownHashes = (await context.StoredObjects.Select(entity => entity.ContentHash).ToListAsync(cancellationToken).ConfigureAwait(false))
+            .ToHashSet(StringComparer.Ordinal);
         foreach (var file in manifest.Files)
         {
             snapshot.Files.Add(new()
@@ -50,7 +52,7 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
                 Size = file.Size,
                 LastWriteUtc = file.LastWriteUtc
             });
-            if (!await context.StoredObjects.AnyAsync(entity => entity.ContentHash == file.ContentHash, cancellationToken).ConfigureAwait(false))
+            if (knownHashes.Add(file.ContentHash))
                 context.StoredObjects.Add(new() { ContentHash = file.ContentHash, PlaintextSize = file.Size, CreatedUtc = manifest.CreatedUtc });
         }
         context.BackupEvents.Add(new() { CreatedUtc = DateTimeOffset.UtcNow, Severity = "Success", Message = $"Backup completed with {manifest.Files.Count} files." });
@@ -128,6 +130,7 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
         context.BackupSnapshots.RemoveRange(context.BackupSnapshots);
         context.StoredObjects.RemoveRange(context.StoredObjects);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var knownHashes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in manifests.OrderBy(item => item.Manifest.CreatedUtc))
         {
             var entity = new SnapshotEntity
@@ -149,7 +152,7 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
             };
             context.BackupSnapshots.Add(entity);
             foreach (var file in item.Manifest.Files)
-                if (!await context.StoredObjects.AnyAsync(stored => stored.ContentHash == file.ContentHash, cancellationToken).ConfigureAwait(false))
+                if (knownHashes.Add(file.ContentHash))
                     context.StoredObjects.Add(new() { ContentHash = file.ContentHash, PlaintextSize = file.Size, CreatedUtc = item.Manifest.CreatedUtc });
             await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -165,4 +168,3 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
         return new(options);
     }
 }
-

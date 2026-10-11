@@ -10,6 +10,7 @@ public interface IFileScanner
 
 public interface IVaultObjectStore
 {
+    Task<IAsyncDisposable> AcquireWriteLockAsync(UnlockedVault vault, CancellationToken cancellationToken);
     Task<bool> ContainsObjectAsync(UnlockedVault vault, string contentHash, CancellationToken cancellationToken);
     Task StoreObjectAsync(UnlockedVault vault, string contentHash, string sourcePath, CancellationToken cancellationToken);
     Task RestoreObjectAsync(UnlockedVault vault, string contentHash, string destinationPath, CancellationToken cancellationToken);
@@ -49,4 +50,3 @@ public interface IRecoveryService
     Task<RestoreResult> RestoreAsync(UnlockedVault vault, Guid snapshotId, IEnumerable<string>? selectedPaths,
         string destinationRoot, bool overwrite, IProgress<BackupProgress>? progress, CancellationToken cancellationToken);
 }
-
