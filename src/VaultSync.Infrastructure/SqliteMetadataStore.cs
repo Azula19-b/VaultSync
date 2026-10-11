@@ -164,7 +164,9 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
     {
         if (_databasePath is null) throw new InvalidOperationException("Initialize the metadata store before using it.");
         var options = new DbContextOptionsBuilder<VaultDbContext>()
-            .UseSqlite($"Data Source={_databasePath};Mode=ReadWriteCreate;Cache=Shared")
+            // Short-lived contexts must release vault files immediately so a vault can be
+            // moved, rebuilt, or cleaned up on Windows, where pooled SQLite handles lock files.
+            .UseSqlite($"Data Source={_databasePath};Mode=ReadWriteCreate;Pooling=False")
             .EnableSensitiveDataLogging(false).Options;
         return new(options);
     }
