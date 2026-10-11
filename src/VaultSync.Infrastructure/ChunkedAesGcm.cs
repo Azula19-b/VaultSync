@@ -13,7 +13,7 @@ internal static class ChunkedAesGcm
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
-    public static async Task EncryptAsync(Stream plaintext, Stream destination, byte[] key, string context,
+    public static async Task<string> EncryptAsync(Stream plaintext, Stream destination, byte[] key, string context,
         CancellationToken cancellationToken)
     {
         var length = plaintext.Length - plaintext.Position;
@@ -25,11 +25,13 @@ internal static class ChunkedAesGcm
         try
         {
             using var aes = new AesGcm(key, TagSize);
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             var chunkIndex = 0;
             while (true)
             {
                 var read = await ReadChunkAsync(plaintext, buffer, DefaultChunkSize, cancellationToken).ConfigureAwait(false);
                 if (read == 0) break;
+                hash.AppendData(buffer, 0, read);
                 var nonce = RandomNumberGenerator.GetBytes(NonceSize);
                 var ciphertext = new byte[read];
                 var tag = new byte[TagSize];
@@ -41,6 +43,7 @@ internal static class ChunkedAesGcm
                 chunkIndex++;
             }
             await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+            return Convert.ToHexStringLower(hash.GetHashAndReset());
         }
         finally
         {
@@ -149,4 +152,3 @@ internal static class ChunkedAesGcm
         return BinaryPrimitives.ReadInt64LittleEndian(buffer);
     }
 }
-

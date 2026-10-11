@@ -12,7 +12,7 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
     {
         _databasePath = Path.Combine(Path.GetFullPath(vaultRoot), "vault-index.db");
         await using var context = CreateContext();
-        await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task BeginSnapshotAsync(Guid snapshotId, DateTimeOffset createdUtc, CancellationToken cancellationToken)

@@ -25,7 +25,7 @@ public partial class App : Avalonia.Application
             {
                 DataContext = _services.GetRequiredService<MainViewModel>(),
             };
-            desktop.Exit += (_, _) => _services.Dispose();
+            desktop.Exit += (_, _) => _services.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
         base.OnFrameworkInitializationCompleted();

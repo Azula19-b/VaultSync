@@ -47,7 +47,9 @@ public sealed class VaultObjectStore : IVaultObjectStore
                 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
             await using var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                 1024 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough);
-            await ChunkedAesGcm.EncryptAsync(input, output, vault.MasterKey, "object:" + contentHash, cancellationToken).ConfigureAwait(false);
+            var encryptedHash = await ChunkedAesGcm.EncryptAsync(input, output, vault.MasterKey, "object:" + contentHash, cancellationToken).ConfigureAwait(false);
+            if (!encryptedHash.Equals(contentHash, StringComparison.Ordinal))
+                throw new SourceChangedException(sourcePath);
             output.Close();
             try { File.Move(temporary, destination); }
             catch (IOException) when (File.Exists(destination)) { File.Delete(temporary); }
@@ -100,7 +102,9 @@ public sealed class VaultObjectStore : IVaultObjectStore
             await using var input = new MemoryStream(bytes, writable: false);
             await using var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                 64 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough);
-            await ChunkedAesGcm.EncryptAsync(input, output, vault.MasterKey, "manifest:" + hash, cancellationToken).ConfigureAwait(false);
+            var encryptedHash = await ChunkedAesGcm.EncryptAsync(input, output, vault.MasterKey, "manifest:" + hash, cancellationToken).ConfigureAwait(false);
+            if (!encryptedHash.Equals(hash, StringComparison.Ordinal))
+                throw new InvalidOperationException("The manifest changed while it was being encrypted.");
             output.Close();
             File.Move(temporary, path);
             return path;

@@ -3,6 +3,7 @@
 .vscode/
 .vs/
 .dotnet/
+.tools/
 **/bin/
 **/obj/
 TestResults/
@@ -15,4 +16,3 @@ TestResults/
 *.vso
 *.vsm
 coverage/
-
