@@ -9,6 +9,22 @@ public sealed class VaultObjectStore : IVaultObjectStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    public async Task<IAsyncDisposable> AcquireWriteLockAsync(UnlockedVault vault, CancellationToken cancellationToken)
+    {
+        var lockPath = Path.Combine(vault.RootPath, ".vaultsync.lock");
+        try
+        {
+            var stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1,
+                FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+            await stream.WriteAsync(new byte[] { 1 }, cancellationToken).ConfigureAwait(false);
+            return new AsyncStreamLock(stream);
+        }
+        catch (IOException exception)
+        {
+            throw new InvalidOperationException("This vault is already being written by another backup operation.", exception);
+        }
+    }
+
     public Task<bool> ContainsObjectAsync(UnlockedVault vault, string contentHash, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -137,19 +153,3 @@ public sealed class VaultObjectStore : IVaultObjectStore
         public ValueTask DisposeAsync() => stream.DisposeAsync();
     }
 }
-    public async Task<IAsyncDisposable> AcquireWriteLockAsync(UnlockedVault vault, CancellationToken cancellationToken)
-    {
-        var lockPath = Path.Combine(vault.RootPath, ".vaultsync.lock");
-        try
-        {
-            var stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1,
-                FileOptions.Asynchronous | FileOptions.DeleteOnClose);
-            await stream.WriteAsync([1], cancellationToken).ConfigureAwait(false);
-            return new AsyncStreamLock(stream);
-        }
-        catch (IOException exception)
-        {
-            throw new InvalidOperationException("This vault is already being written by another backup operation.", exception);
-        }
-    }
-
