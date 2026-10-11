@@ -74,10 +74,11 @@ public sealed class SqliteMetadataStore : IVaultMetadataStore
     public async Task<IReadOnlyList<SnapshotSummary>> GetSnapshotsAsync(CancellationToken cancellationToken)
     {
         await using var context = CreateContext();
-        return await context.BackupSnapshots.AsNoTracking().OrderByDescending(entity => entity.CreatedUtc)
+        var entities = await context.BackupSnapshots.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        return entities.OrderByDescending(entity => entity.CreatedUtc)
             .Select(entity => new SnapshotSummary(entity.ExternalId, entity.CreatedUtc,
                 Enum.Parse<SnapshotState>(entity.State), entity.FileCount, entity.LogicalBytes, entity.NewStoredBytes, entity.Error))
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
+            .ToList();
     }
 
     public async Task<SnapshotManifest?> GetSnapshotAsync(Guid snapshotId, CancellationToken cancellationToken)
