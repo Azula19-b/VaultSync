@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VaultSync.Application/VaultSync.Application.csproj" />
+    <Project Path="src/VaultSync.Core/VaultSync.Core.csproj" />
+    <Project Path="src/VaultSync.Desktop/VaultSync.Desktop.csproj" />
+    <Project Path="src/VaultSync.Infrastructure/VaultSync.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VaultSync.IntegrationTests/VaultSync.IntegrationTests.csproj" />
+    <Project Path="tests/VaultSync.UnitTests/VaultSync.UnitTests.csproj" />
+  </Folder>
+</Solution>
